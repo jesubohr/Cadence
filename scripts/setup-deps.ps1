@@ -10,6 +10,10 @@
 .PARAMETER OutDir
   Target folder. Default: %LOCALAPPDATA%\Cadence\tools
 
+.PARAMETER Tools
+  Install only these tools, by their names in deps.json: yt-dlp, ffmpeg, deno.
+  Accepts a comma-separated list. Default: all tools.
+
 .PARAMETER Force
   Download again even when the pinned version is already installed.
 
@@ -20,6 +24,7 @@
 [CmdletBinding()]
 param(
     [string]$OutDir = (Join-Path $env:LOCALAPPDATA 'Cadence\tools'),
+    [string[]]$Tools,
     [switch]$Force,
     [switch]$UpdateManifest
 )
@@ -142,7 +147,13 @@ function Install-Tool([string]$Name, $Spec) {
 if ($UpdateManifest) { Update-Manifest }
 
 $manifest = Get-Content -Raw -LiteralPath $ManifestPath | ConvertFrom-Json
-foreach ($property in $manifest.tools.PSObject.Properties) {
-    Install-Tool $property.Name $property.Value
+$names = @($manifest.tools.PSObject.Properties.Name)
+# powershell -File passes "a,b" as one string.
+$selected = if ($Tools) { @($Tools -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) } else { $names }
+foreach ($name in $selected) {
+    if ($names -notcontains $name) { throw "Unknown tool '$name'. Use: $($names -join ', ')" }
+}
+foreach ($name in $selected) {
+    Install-Tool $name $manifest.tools.$name
 }
 Write-Host "Done. Tools are in $OutDir"

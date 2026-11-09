@@ -1,6 +1,6 @@
 ; Inno Setup script. scripts\package.ps1 passes the defines and runs ISCC.
 #ifndef AppVersion
-  #error Run scripts\package.ps1. It passes AppVersion, StageDir, OutputDir and IconFile.
+  #error Run scripts\package.ps1. It passes the version, folder and tool version defines.
 #endif
 
 [Setup]
@@ -25,9 +25,14 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 
+[Messages]
+SelectTasksLabel2=Cadence needs yt-dlp, FFmpeg and Deno at the versions below or newer. If you have an older version, Cadence fails. Clear a tool only if you already have it on your PATH at that version or newer.
+
 [Tasks]
-Name: tools; Description: "Download yt-dlp, FFmpeg and Deno (Cadence needs them to download media)"
-Name: desktopicon; Description: "Create a desktop shortcut"; Flags: unchecked
+Name: ytdlp; Description: "yt-dlp {#YtdlpVersion}"; GroupDescription: "Download these tools:"
+Name: ffmpeg; Description: "FFmpeg and FFprobe {#FfmpegVersion}"; GroupDescription: "Download these tools:"
+Name: deno; Description: "Deno {#DenoVersion}"; GroupDescription: "Download these tools:"
+Name: desktopicon; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: unchecked
 
 [Files]
 Source: "{#StageDir}\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
@@ -45,13 +50,23 @@ Filename: "{app}\Cadence.exe"; Description: "Start Cadence"; Flags: nowait posti
 // The script skips tools that are already installed at the pinned version.
 procedure CurStepChanged(CurStep: TSetupStep);
 var
+  Tools: String;
   ResultCode: Integer;
 begin
-  if (CurStep = ssPostInstall) and WizardIsTaskSelected('tools') then
+  if CurStep <> ssPostInstall then
+    Exit;
+  if WizardIsTaskSelected('ytdlp') then
+    Tools := Tools + ',yt-dlp';
+  if WizardIsTaskSelected('ffmpeg') then
+    Tools := Tools + ',ffmpeg';
+  if WizardIsTaskSelected('deno') then
+    Tools := Tools + ',deno';
+  if Tools <> '' then
   begin
-    WizardForm.StatusLabel.Caption := 'Downloading yt-dlp, FFmpeg and Deno...';
+    WizardForm.StatusLabel.Caption := 'Downloading tools...';
     if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
-      '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\scripts\setup-deps.ps1') + '"',
+      '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\scripts\setup-deps.ps1') +
+      '" -Tools ' + Copy(Tools, 2, MaxInt),
       '', SW_SHOW, ewWaitUntilTerminated, ResultCode) or (ResultCode <> 0) then
       SuppressibleMsgBox(
         'Cadence is installed, but the tools were not downloaded. ' +

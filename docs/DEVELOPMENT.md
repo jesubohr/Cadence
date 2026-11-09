@@ -36,6 +36,7 @@ FFprobe must sit in the same folder as FFmpeg.
 | Option | Effect |
 | --- | --- |
 | `-OutDir <path>` | Install somewhere else |
+| `-Tools <names>` | Install only these tools, for example `-Tools yt-dlp,deno` |
 | `-Force` | Download again |
 | `-UpdateManifest` | Pin the latest releases first. Hashes come from the checksum files that yt-dlp, Deno and gyan.dev publish |
 
@@ -71,7 +72,7 @@ Use `-SkipInstaller` to build only the folder and the zip.
 
 ### The installer
 
-`scripts\installer.iss` installs the package folder for the current user into `%LOCALAPPDATA%\Programs\Cadence`. It needs no administrator rights. It adds Start menu shortcuts (Cadence and Install tools), an optional desktop shortcut and an entry in Settings > Apps. After the files are copied, it runs `scripts\setup-deps.ps1` to download the tools into `%LOCALAPPDATA%\Cadence	ools`, unless the user clears that task. Setup asks to close a running Cadence. The uninstaller removes the program files and asks whether to delete `%LOCALAPPDATA%\Cadence` (settings, queue, tools). A silent uninstall keeps that folder.
+`scripts\installer.iss` installs the package folder for the current user into `%LOCALAPPDATA%\Programs\Cadence`. It needs no administrator rights. It adds Start menu shortcuts (Cadence and Install tools), an optional desktop shortcut and an entry in Settings > Apps. After the files are copied, it runs `scripts\setup-deps.ps1 -Tools <names>` to download the tools into `%LOCALAPPDATA%\Cadence	ools`. The task page has one checkbox per tool with its pinned version, and only the selected tools are downloaded. Setup asks to close a running Cadence. The uninstaller removes the program files and asks whether to delete `%LOCALAPPDATA%\Cadence` (settings, queue, tools). A silent uninstall keeps that folder.
 
 Test it without the wizard: `Cadence-<version>-win64-setup.exe /VERYSILENT /DIR=<folder>`, then run `unins000.exe /VERYSILENT` in that folder.
 

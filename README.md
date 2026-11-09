@@ -5,7 +5,7 @@ A small floating window for Windows that downloads songs as MP3 and videos as MP
 ## Download
 
 1. Go to the [latest release](https://github.com/jesubohr/Cadence/releases/latest) and download `Cadence-<version>-win64-setup.exe`.
-2. Run it. The installer needs no administrator rights. Keep **Download yt-dlp, FFmpeg and Deno** selected. It downloads them from their own projects and checks each file against a pinned SHA-256. This needs an internet connection and takes a minute.
+2. Run it. The installer needs no administrator rights. Under **Download these tools**, keep yt-dlp, FFmpeg and Deno selected. Clear a tool only if you already have it on your PATH at the version shown or newer, because an older version makes Cadence fail. The installer downloads the selected tools from their own projects and checks each file against a pinned SHA-256. This needs an internet connection and takes a minute.
 3. Start Cadence from the Start menu.
 
 To remove Cadence, use **Settings > Apps > Installed apps**. The uninstaller asks if it should also delete your settings, queue and downloaded tools. Your downloaded music and videos stay where they are.

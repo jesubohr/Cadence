@@ -110,7 +110,9 @@ try {
             Sort-Object LastWriteTime -Descending | Select-Object -First 1
         if (-not $icon) { throw 'Missing cadence.ico. Run without -SkipBuild.' }
 
-        & $iscc /Qp "/DAppVersion=$version" "/DStageDir=$stage" "/DOutputDir=$dist" "/DIconFile=$($icon.FullName)" (Join-Path $PSScriptRoot 'installer.iss')
+        & $iscc /Qp "/DAppVersion=$version" "/DStageDir=$stage" "/DOutputDir=$dist" "/DIconFile=$($icon.FullName)" `
+            "/DYtdlpVersion=$($tools.'yt-dlp'.version)" "/DFfmpegVersion=$($tools.ffmpeg.version)" "/DDenoVersion=$($tools.deno.version)" `
+            (Join-Path $PSScriptRoot 'installer.iss')
         if ($LASTEXITCODE -ne 0) { throw 'ISCC failed' }
 
         $installer = Join-Path $dist "Cadence-$version-win64-setup.exe"
