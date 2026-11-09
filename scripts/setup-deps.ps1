@@ -50,7 +50,16 @@ function Get-HashFrom([string]$Text) {
 
 function Save-Verified([string]$Url, [string]$Sha256, [string]$Destination) {
     Write-Host "  downloading $Url"
-    Invoke-WebRequest -Uri $Url -OutFile $Destination -UseBasicParsing -Headers $Headers
+    for ($attempt = 1; ; $attempt++) {
+        try {
+            Invoke-WebRequest -Uri $Url -OutFile $Destination -UseBasicParsing -Headers $Headers
+            break
+        } catch {
+            if ($attempt -ge 5) { throw }
+            Write-Host "  failed ($($_.Exception.Message)), retrying"
+            Start-Sleep -Seconds (5 * $attempt)
+        }
+    }
     $actual = Get-Sha256 $Destination
     if ($actual -ne $Sha256.ToLowerInvariant()) {
         Remove-Item -LiteralPath $Destination -Force

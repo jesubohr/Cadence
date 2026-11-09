@@ -7,6 +7,7 @@ Cadence is a native Rust app built with [GPUI](https://www.gpui.rs). It runs the
 - Windows 10 or 11, x64.
 - Rust 1.90 or newer (tested with 1.93.1) with the MSVC toolchain. Install the Visual Studio Build Tools with the "Desktop development with C++" workload and a Windows SDK.
 - Internet access for the first build and for the tool download.
+- [Inno Setup 6](https://jrsoftware.org/isinfo.php) to build the installer: `winget install JRSoftware.InnoSetup`.
 
 ## Run from source
 
@@ -59,27 +60,38 @@ The `CI` workflow runs the first three commands on every push to `main` and on e
 .\scripts\package.ps1
 ```
 
-This builds the release executable, downloads the verified tools into the package, and writes:
+This builds the release executable and writes the package. The package has no tools in it. It has `Install-Tools.cmd` and `scripts\` (the setup script and `deps.json`), so the user downloads the verified tools on their own PC. It writes:
 
-- `dist\Cadence\` with `Cadence.exe`, `tools\`, `README.md`, `LICENSE`, `NOTICE.txt` and `RUST_DEPENDENCIES.txt`
+- `dist\Cadence\` with `Cadence.exe`, `Install-Tools.cmd`, `scripts\`, `README.md`, `LICENSE`, `NOTICE.txt` and `RUST_DEPENDENCIES.txt`
 - `dist\Cadence-<version>-win64.zip`
 - `dist\Cadence-<version>-win64.zip.sha256`
+- `dist\Cadence-<version>-win64-setup.exe`, built from `scripts\installer.iss`, and its `.sha256` file
+
+Use `-SkipInstaller` to build only the folder and the zip.
+
+### The installer
+
+`scripts\installer.iss` installs the package folder for the current user into `%LOCALAPPDATA%\Programs\Cadence`. It needs no administrator rights. It adds Start menu shortcuts (Cadence and Install tools), an optional desktop shortcut and an entry in Settings > Apps. After the files are copied, it runs `scripts\setup-deps.ps1` to download the tools into `%LOCALAPPDATA%\Cadence	ools`, unless the user clears that task. Setup asks to close a running Cadence. The uninstaller removes the program files and asks whether to delete `%LOCALAPPDATA%\Cadence` (settings, queue, tools). A silent uninstall keeps that folder.
+
+Test it without the wizard: `Cadence-<version>-win64-setup.exe /VERYSILENT /DIR=<folder>`, then run `unins000.exe /VERYSILENT` in that folder.
 
 `dist\` is ignored by git.
 
 ## Release
 
-The `Release` workflow builds the zip and publishes it on GitHub when a tag that starts with `v` is pushed.
+The `Release` workflow builds the zip and the installer and publishes them on GitHub when a tag that starts with `v` is pushed.
 
 1. Change `version` in `Cargo.toml` and run `cargo build` so `Cargo.lock` follows.
 2. Commit and push to `main`. Wait for `CI` to pass.
 3. Tag and push: `git tag v<version>` and `git push origin v<version>`.
 
-The workflow stops when the tag does not match the version in `Cargo.toml`, or when `Cargo.lock` is out of date. It creates the release with generated notes and uploads the zip and its `.sha256` file. If the release already exists, the workflow replaces the two files.
+The workflow stops when the tag does not match the version in `Cargo.toml`, or when `Cargo.lock` is out of date. It creates the release with generated notes and uploads the installer, the zip and their `.sha256` files. They are small because they have no tools. If the release already exists, the workflow replaces the files.
 
 ## Licenses of bundled tools
 
-`scripts/package.ps1` writes `NOTICE.txt` from `scripts/deps.json`. yt-dlp and FFmpeg are GPL-3.0 programs that Cadence ships unchanged and starts as separate processes. Cadence's own code stays MIT. When you change a tool in `deps.json`, check its license again, and keep the license text and source link in the package.
+Cadence does not redistribute yt-dlp, FFmpeg, FFprobe or Deno. `Install-Tools.cmd` downloads them from the upstream projects on the user's PC. `scripts/package.ps1` writes `NOTICE.txt` from `scripts/deps.json`. Cadence's own code stays MIT, and it starts the tools as separate processes.
+
+Why the tools are not in the zip: yt-dlp and the gyan.dev FFmpeg build are GPL-3.0. Shipping them means that this project must host their exact corresponding source. gyan.dev publishes only the FFmpeg commit of a build. The build has about 35 external libraries (x264, x265, libvpx and others), and their exact versions and build scripts are not published as a source package. Upstream does not offer a source package that matches the binary, so this project cannot host one. Do not add GPL binaries to the zip unless you can host the exact source for them with the release.
 
 ## Architecture
 

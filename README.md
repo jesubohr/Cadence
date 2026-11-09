@@ -4,19 +4,25 @@ A small floating window for Windows that downloads songs as MP3 and videos as MP
 
 ## Download
 
-1. Go to the [latest release](https://github.com/jesubohr/Cadence/releases/latest) and download `Cadence-<version>-win64.zip`.
-2. Unzip it anywhere.
-3. Run `Cadence.exe`.
+1. Go to the [latest release](https://github.com/jesubohr/Cadence/releases/latest) and download `Cadence-<version>-win64-setup.exe`.
+2. Run it. The installer needs no administrator rights. Keep **Download yt-dlp, FFmpeg and Deno** selected. It downloads them from their own projects and checks each file against a pinned SHA-256. This needs an internet connection and takes a minute.
+3. Start Cadence from the Start menu.
 
-Everything Cadence needs is in the zip. You do not install anything else. Windows 10 or 11 (64-bit) is required.
+To remove Cadence, use **Settings > Apps > Installed apps**. The uninstaller asks if it should also delete your settings, queue and downloaded tools. Your downloaded music and videos stay where they are.
+
+Windows 10 or 11 (64-bit) is required. The installer does not contain the tools, because their licenses (GPL) ask for source code that this project cannot host. If a tool is missing, Cadence tells you which one. Run **Install tools** from the Start menu, then press **Check again**.
 
 Cadence is not code-signed yet, so Windows SmartScreen may warn on first start. Choose **More info**, then **Run anyway**.
 
 To check your download, compare its SHA-256 with the `.sha256` file on the release page:
 
 ```powershell
-Get-FileHash .\Cadence-<version>-win64.zip -Algorithm SHA256
+Get-FileHash .\Cadence-<version>-win64-setup.exe -Algorithm SHA256
 ```
+
+### Without the installer
+
+Download `Cadence-<version>-win64.zip` and unzip it anywhere. Run `Install-Tools.cmd` once, then run `Cadence.exe`.
 
 ## What it does
 
@@ -29,7 +35,7 @@ Get-FileHash .\Cadence-<version>-win64.zip -Algorithm SHA256
 
 ## Quick start
 
-1. Start `Cadence.exe`.
+1. Start Cadence.
 2. Paste a link or type a song title in the box, then submit it.
 3. Choose **Audio** (MP3) or **Video** (MP4) and a quality.
 4. Select the results you want and press **Download**. Follow progress in the **Queue** tab.
@@ -60,4 +66,4 @@ Build, test and release instructions are in [docs/DEVELOPMENT.md](https://github
 
 Cadence is released under the [MIT License](LICENSE).
 
-The download bundles yt-dlp, FFmpeg, FFprobe and Deno as separate programs, unchanged. yt-dlp and FFmpeg are licensed under GPL-3.0. The zip contains `NOTICE.txt` with the license, download link and source link of each program, and `RUST_DEPENDENCIES.txt` with the libraries inside `Cadence.exe`. The exact versions are pinned in [scripts/deps.json](https://github.com/jesubohr/Cadence/blob/main/scripts/deps.json).
+The installer and the zip contain only Cadence and its install script. They do not redistribute yt-dlp, FFmpeg, FFprobe or Deno. `Install-Tools.cmd` downloads them from the upstream projects (yt-dlp and FFmpeg are GPL-3.0 programs, Deno is MIT) and Cadence starts them as separate programs, unchanged. `NOTICE.txt` in the zip lists the license, download link and SHA-256 of each tool, and `RUST_DEPENDENCIES.txt` lists the libraries inside `Cadence.exe`. The exact versions are pinned in [scripts/deps.json](https://github.com/jesubohr/Cadence/blob/main/scripts/deps.json).

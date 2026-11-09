@@ -1,18 +1,25 @@
 <#
 .SYNOPSIS
-  Builds a release folder and zip: dist\Cadence and dist\Cadence-<version>-win64.zip.
+  Builds a release folder, a zip and a setup program in dist.
 
 .DESCRIPTION
-  Builds the release executable, downloads the pinned and verified tools into
-  the package (see setup-deps.ps1), and writes the license notices. The result
-  runs without any other setup. A SHA-256 file is written next to the zip.
+  Builds the release executable and writes the package: Cadence.exe, the tool
+  install script with its pinned manifest, and the license notices. The package
+  does not contain yt-dlp, FFmpeg, FFprobe or Deno. Install-Tools.cmd downloads
+  them from the upstream projects and checks the pinned SHA-256 of each file.
+  The setup program (Inno Setup) installs the same files and downloads the tools.
+  A SHA-256 file is written next to the zip and next to the setup program.
 
 .PARAMETER SkipBuild
   Reuse an existing target\release\cadence.exe.
+
+.PARAMETER SkipInstaller
+  Do not build the setup program. Without this switch, Inno Setup 6 must be installed.
 #>
 [CmdletBinding()]
 param(
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [switch]$SkipInstaller
 )
 
 $ErrorActionPreference = 'Stop'
@@ -33,41 +40,42 @@ try {
     $version = [regex]::Match((Get-Content -Raw -LiteralPath 'Cargo.toml'), '(?m)^version = "([^"]+)"').Groups[1].Value
 
     if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
-    New-Item -ItemType Directory -Force -Path (Join-Path $stage 'tools') | Out-Null
+    New-Item -ItemType Directory -Force -Path (Join-Path $stage 'scripts') | Out-Null
     Copy-Item -LiteralPath $exe -Destination (Join-Path $stage 'Cadence.exe')
     Copy-Item -LiteralPath 'README.md', 'LICENSE' -Destination $stage
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'setup-deps.ps1'), (Join-Path $PSScriptRoot 'deps.json') -Destination (Join-Path $stage 'scripts')
 
-    & (Join-Path $PSScriptRoot 'setup-deps.ps1') -OutDir (Join-Path $stage 'tools')
+    $install = @(
+        '@echo off',
+        'powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\setup-deps.ps1"',
+        'if errorlevel 1 (echo. & echo The tool install failed. Read the message above.) else (echo. & echo Done. Start Cadence.exe.)',
+        'pause'
+    )
+    Set-Content -LiteralPath (Join-Path $stage 'Install-Tools.cmd') -Value $install -Encoding ASCII
 
     $manifest = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot 'deps.json') | ConvertFrom-Json
     $tools = $manifest.tools
     $notes = [ordered]@{
-        'yt-dlp' = @{
-            License = 'GPL-3.0-or-later. The standalone executable bundles GPL code. The yt-dlp code itself is the Unlicense.'
-            Source  = "https://github.com/yt-dlp/yt-dlp/tree/$($tools.'yt-dlp'.version)"
-        }
-        'deno'   = @{
-            License = 'MIT'
-            Source  = "https://github.com/denoland/deno/tree/v$($tools.deno.version)"
-        }
-        'ffmpeg' = @{
-            License = 'GPL-3.0. Build by gyan.dev with the GPL parts enabled.'
-            Source  = "https://ffmpeg.org/releases/ffmpeg-$($tools.ffmpeg.version).tar.xz and https://www.gyan.dev/ffmpeg/builds/"
-        }
+        'yt-dlp' = 'GPL-3.0-or-later (the standalone executable bundles GPL code; the yt-dlp code itself is the Unlicense). Source: https://github.com/yt-dlp/yt-dlp/tree/{0}'
+        'deno'   = 'MIT. Source: https://github.com/denoland/deno/tree/v{0}'
+        'ffmpeg' = 'GPL-3.0 build by gyan.dev. Source: https://github.com/FFmpeg/FFmpeg and the libraries listed at https://www.gyan.dev/ffmpeg/builds/'
     }
     $lines = @(
         'Cadence is MIT licensed. See LICENSE.',
         'The Rust libraries inside Cadence.exe are listed in RUST_DEPENDENCIES.txt.',
         '',
-        'Cadence bundles these programs unchanged and runs them as separate processes.',
-        'The GPL-3.0 text is in tools\ffmpeg-LICENSE.txt.',
+        'This package does not contain yt-dlp, FFmpeg, FFprobe or Deno.',
+        'Install-Tools.cmd downloads them on your PC from the upstream projects below.',
+        'The download is checked against the SHA-256 pinned in scripts\deps.json.',
+        'Cadence starts these programs as separate processes and does not change them.',
+        'Each program stays under its own license and is distributed by its own project.',
         ''
     )
     foreach ($name in $notes.Keys) {
         $lines += "$name $($tools.$name.version)"
-        $lines += "  license:  $($notes[$name].License)"
+        $lines += "  license:  $($notes[$name] -f $tools.$name.version)"
         $lines += "  download: $($tools.$name.url)"
-        $lines += "  source:   $($notes[$name].Source)"
+        $lines += "  sha256:   $($tools.$name.sha256)"
     }
     Set-Content -LiteralPath (Join-Path $stage 'NOTICE.txt') -Value $lines -Encoding ASCII
 
@@ -87,9 +95,36 @@ try {
     # LF only, so sha256sum -c works on Linux and macOS as well.
     [IO.File]::WriteAllText("$zip.sha256", "$hash  $(Split-Path -Leaf $zip)`n")
 
+    $installer = $null
+    if (-not $SkipInstaller) {
+        $iscc = @(
+            (Get-Command iscc -ErrorAction SilentlyContinue).Source,
+            (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'),
+            (Join-Path $env:ProgramFiles 'Inno Setup 6\ISCC.exe'),
+            (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe')
+        ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
+        if (-not $iscc) { throw 'Inno Setup 6 not found. Run "winget install JRSoftware.InnoSetup" or pass -SkipInstaller.' }
+
+        # build.rs writes the icon that is embedded in Cadence.exe.
+        $icon = Get-ChildItem -Path (Join-Path $root 'target\release\build\cadence-*\out\cadence.ico') |
+            Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if (-not $icon) { throw 'Missing cadence.ico. Run without -SkipBuild.' }
+
+        & $iscc /Qp "/DAppVersion=$version" "/DStageDir=$stage" "/DOutputDir=$dist" "/DIconFile=$($icon.FullName)" (Join-Path $PSScriptRoot 'installer.iss')
+        if ($LASTEXITCODE -ne 0) { throw 'ISCC failed' }
+
+        $installer = Join-Path $dist "Cadence-$version-win64-setup.exe"
+        $installerHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $installer).Hash.ToLowerInvariant()
+        [IO.File]::WriteAllText("$installer.sha256", "$installerHash  $(Split-Path -Leaf $installer)`n")
+    }
+
     Write-Host "Package folder: $stage"
     Write-Host "Package zip:    $zip"
     Write-Host "SHA-256:        $hash"
+    if ($installer) {
+        Write-Host "Installer:      $installer"
+        Write-Host "SHA-256:        $installerHash"
+    }
 } finally {
     Pop-Location
 }
