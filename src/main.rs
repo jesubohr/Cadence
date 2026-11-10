@@ -1,7 +1,6 @@
 #![cfg_attr(not(test), windows_subsystem = "windows")]
 
 mod config;
-mod icon;
 mod media;
 mod paths;
 mod process;

@@ -3,8 +3,6 @@
 use tray_icon::menu::{Menu, MenuEvent, MenuItem};
 use tray_icon::{Icon, MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent};
 
-use crate::icon;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TrayAction {
     Show,
@@ -23,8 +21,8 @@ pub fn create(actions: async_channel::Sender<TrayAction>) -> Result<Tray, String
     menu.append_items(&[&show, &quit])
         .map_err(|e| e.to_string())?;
 
-    let size = 32;
-    let image = Icon::from_rgba(icon::rgba(size), size, size).map_err(|e| e.to_string())?;
+    // Resource 1 is the logo that build.rs embeds in the executable.
+    let image = Icon::from_resource(1, Some((32, 32))).map_err(|e| e.to_string())?;
     let tray = TrayIconBuilder::new()
         .with_menu(Box::new(menu))
         .with_menu_on_left_click(false)

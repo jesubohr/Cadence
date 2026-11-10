@@ -3,8 +3,8 @@
 use std::path::PathBuf;
 
 use gpui::{
-    div, img, prelude::*, px, rgb, svg, Div, ElementId, FontWeight, ObjectFit, SharedString,
-    Stateful,
+    div, img, prelude::*, px, rgb, svg, Div, ElementId, FontWeight, ImageSource, ObjectFit,
+    Resource, SharedString, Stateful,
 };
 
 use super::theme::*;
@@ -15,6 +15,14 @@ pub fn icon(name: &'static str, size: f32, color: u32) -> impl IntoElement {
         .size(px(size))
         .flex_none()
         .text_color(rgb(color))
+}
+
+/// The full-color app logo. A bare "logo.svg" would parse as a URI, so the
+/// source names the embedded resource explicitly.
+pub fn logo(size: f32) -> impl IntoElement {
+    img(ImageSource::Resource(Resource::Embedded("logo.svg".into())))
+        .size(px(size))
+        .flex_none()
 }
 
 pub fn icon_button(id: impl Into<ElementId>, name: &'static str, active: bool) -> Stateful<Div> {

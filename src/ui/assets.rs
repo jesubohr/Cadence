@@ -1,4 +1,4 @@
-//! Icons compiled into the executable.
+//! Icons and the logo compiled into the executable.
 
 use std::borrow::Cow;
 
@@ -10,6 +10,7 @@ macro_rules! icons {
     ($($name:literal),* $(,)?) => {
         fn find(path: &str) -> Option<&'static [u8]> {
             match path {
+                "logo.svg" => Some(include_bytes!("../../assets/logo.svg")),
                 $(concat!("icons/", $name, ".svg") => {
                     Some(include_bytes!(concat!("../../assets/icons/", $name, ".svg")))
                 })*

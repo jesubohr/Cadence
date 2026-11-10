@@ -407,10 +407,12 @@ impl Cadence {
                     .h_full()
                     .flex()
                     .items_center()
+                    .gap(px(8.))
                     .px(px(16.))
                     .window_control_area(WindowControlArea::Drag)
                     .text_color(rgb(MUTED))
                     .font_weight(FontWeight::SEMIBOLD)
+                    .child(logo(20.))
                     .child("Cadence"),
             )
             .child(

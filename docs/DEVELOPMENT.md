@@ -109,7 +109,6 @@ src/
   config.rs      persisted settings         storage.rs  JSON files, atomic writes
   thumbs.rs      thumbnail download and cache
   tray.rs        tray icon and menu         win.rs      hide, restore, topmost, single instance
-  icon.rs        generated app icon, shared with build.rs
 ```
 
 **Threads.** The UI thread never blocks on I/O. Searches, thumbnails, tool checks and config saves run on gpui's background executor. Each download has its own worker thread. A small writer thread saves `queue.json`. The queue wakes the UI through a one-slot channel, so bursts of progress updates collapse into one redraw.

@@ -105,12 +105,7 @@ try {
         ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
         if (-not $iscc) { throw 'Inno Setup 6 not found. Run "winget install JRSoftware.InnoSetup" or pass -SkipInstaller.' }
 
-        # build.rs writes the icon that is embedded in Cadence.exe.
-        $icon = Get-ChildItem -Path (Join-Path $root 'target\release\build\cadence-*\out\cadence.ico') |
-            Sort-Object LastWriteTime -Descending | Select-Object -First 1
-        if (-not $icon) { throw 'Missing cadence.ico. Run without -SkipBuild.' }
-
-        & $iscc /Qp "/DAppVersion=$version" "/DStageDir=$stage" "/DOutputDir=$dist" "/DIconFile=$($icon.FullName)" `
+        & $iscc /Qp "/DAppVersion=$version" "/DStageDir=$stage" "/DOutputDir=$dist" "/DIconFile=$(Join-Path $root 'assets\logo.ico')" `
             "/DYtdlpVersion=$($tools.'yt-dlp'.version)" "/DFfmpegVersion=$($tools.ffmpeg.version)" "/DDenoVersion=$($tools.deno.version)" `
             (Join-Path $PSScriptRoot 'installer.iss')
         if ($LASTEXITCODE -ne 0) { throw 'ISCC failed' }
